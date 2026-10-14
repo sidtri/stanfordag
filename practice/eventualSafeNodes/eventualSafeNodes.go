@@ -2,105 +2,57 @@ package main
 
 import (
 	"fmt"
-	"sort"
 )
 
-func buildLL(graph [][]int) AdjList {
-	adjList := make(AdjList)
 
-	for n, v := range graph {
-		adjList.Add(n, v)
-	}
-
-	return adjList
-}
-
+// eventualSafeNodes returns, in ascending order, every node from which
+// all paths lead to a terminal node (i.e. no cycle is reachable).
+//
+// It uses Kahn's algorithm on the reversed graph: a node is safe iff all
+// of its outgoing neighbours are safe. Terminal nodes (out-degree 0) are
+// safe by definition, and we peel safe nodes off layer by layer.
 func eventualSafeNodes(graph [][]int) []int {
-	g := buildLL(graph)
-	l := g.Len()
+	n := len(graph)
 
-	output := make(map[int]struct{})
-	for i := range l {
-		o := dfs(g, i)
-		for _, ii := range o {
-			output[ii] = struct{}{}
-		}
-	}
-	keys := make([]int, 0, len(output))
-	for k := range output {
-		keys = append(keys, k)
-	}
-	sort.Ints(keys)
-	return keys
-}
-
-func contains(slice []int, val int) bool {
-	for _, item := range slice {
-		if item == val {
-			return true
-		}
-	}
-	return false
-}
-
-func dfs(g AdjList, n int) []int {
-	s := Stack{}
-	s.Push(n)
-
-	nodes := []int{}
-	ignoreNodes := []int{}
-	for {
-		n := s.Pop()
-		if n == -1 {
-			break
-		}
-		if contains(ignoreNodes, n) {
-			// already cycle detected earlier. No need to consider
-			continue
-		}
-
-		if contains(nodes, n) {
-			// cycle detected
-			ignoreNodes = append(ignoreNodes, nodes...)
-			nodes = []int{}
-			continue
-		}
-
-		nodes = append(nodes, n)
-
-		l := g[n]
-		for _, aa := range l {
-			s.Push(aa)
+	// Reverse adjacency list and out-degree count.
+	rev := make([][]int, n)
+	outDeg := make([]int, n)
+	for u, neighbours := range graph {
+		outDeg[u] = len(neighbours)
+		for _, v := range neighbours {
+			rev[v] = append(rev[v], u)
 		}
 	}
 
-	return nodes
-}
-
-type Stack []int
-
-func (s *Stack) Push(node int) {
-	*s = append(*s, node)
-}
-
-func (s *Stack) Pop() int {
-	lenS := len(*s)
-	if lenS == 0 {
-		return -1
+	// Seed the queue with all terminal nodes.
+	queue := make([]int, 0, n)
+	for u := 0; u < n; u++ {
+		if outDeg[u] == 0 {
+			queue = append(queue, u)
+		}
 	}
-	node := (*s)[lenS-1]
-	*s = (*s)[0:(lenS - 1)]
-	return node
-}
 
-type AdjList map[int][]int
+	safe := make([]bool, n)
+	for len(queue) > 0 {
+		u := queue[0]
+		queue = queue[1:]
+		safe[u] = true
 
-func (a *AdjList) Add(node int, val []int) {
-	(*a)[node] = val
-}
+		for _, p := range rev[u] {
+			outDeg[p]--
+			if outDeg[p] == 0 {
+				queue = append(queue, p)
+			}
+		}
+	}
 
-func (a AdjList) Len() int {
-	return len(a)
+	result := make([]int, 0, n)
+	for u := 0; u < n; u++ {
+		if safe[u] {
+			result = append(result, u)
+		}
+	}
+	return result
 }
 
 func main() {
