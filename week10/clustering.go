@@ -8,72 +8,17 @@ import (
 	"strings"
 )
 
-// union-find over nodes 1..n
-type UnionFind struct {
-	parent []int
-	rank   []int
-	count  int // number of components
-}
+type Cluster []Edge
 
-func NewUnionFind(n int) *UnionFind {
-	uf := &UnionFind{
-		parent: make([]int, n+1),
-		rank:   make([]int, n+1),
-		count:  n,
-	}
-	for i := 1; i <= n; i++ {
-		uf.parent[i] = i
-	}
-	return uf
-}
-
-func (uf *UnionFind) Find(x int) int {
-	for uf.parent[x] != x {
-		uf.parent[x] = uf.parent[uf.parent[x]] // path halving
-		x = uf.parent[x]
-	}
-	return x
-}
-
-// Union returns true if the two nodes were in different components.
-func (uf *UnionFind) Union(a, b int) bool {
-	ra, rb := uf.Find(a), uf.Find(b)
-	if ra == rb {
-		return false
-	}
-	if uf.rank[ra] < uf.rank[rb] {
-		ra, rb = rb, ra
-	}
-	uf.parent[rb] = ra
-	if uf.rank[ra] == uf.rank[rb] {
-		uf.rank[ra]++
-	}
-	uf.count--
-	return true
-}
-
-// clustering runs Kruskal's algorithm, stopping when k clusters remain,
-// and returns the maximum spacing (cost of the next edge that would merge two clusters).
-func clustering(edges *Edges, n int, k int) int {
-	uf := NewUnionFind(n)
+func clustering(edges *Edges) {
+	lenClusters := 0
+	clusters := Clusters{}
 
 	for edges.Len() > 0 {
-		e := heap.Pop(edges).(Edge)
+		lowEdge := heap.Pop(&edges).(Edge)
 
-		if uf.Union(e.source, e.destination) {
-			if uf.count == k {
-				// the next edge that merges two clusters is the max spacing
-				for edges.Len() > 0 {
-					next := heap.Pop(edges).(Edge)
-					if uf.Find(next.source) != uf.Find(next.destination) {
-						return next.cost
-					}
-				}
-			}
-		}
+		clusters[lowEdge.Name()] = append(clusters[lowEdge.Name()], lowEdge.Name())
 	}
-
-	return 0
 }
 
 type Edge struct {
@@ -110,6 +55,9 @@ func (h *Edges) Pop() any {
 	return x
 }
 
+func (e Edge) Name() string {
+	return string(e.source) + "-" + string(e.destination)
+}
 
 func main() {
 	dataBytes, err := os.ReadFile("clustering1.txt")
@@ -122,8 +70,8 @@ func main() {
 		return
 	}
 
-	totalNodes, _ := strconv.Atoi(strings.TrimSpace(data[0]))
-
+	// totalNodes, _ := strconv.Atoi(strings.TrimSpace(data[0]))
+	// adjList := map[int]Edges{}
 	edges := Edges{}
 	for _, a := range data[1:] {
 		dd := strings.Fields(a)
@@ -131,9 +79,9 @@ func main() {
 		d, _ := strconv.Atoi(strings.TrimSpace(dd[1]))
 		c, _ := strconv.Atoi(strings.TrimSpace(dd[2]))
 		edges = append(edges, Edge{s, d, c})
+		heap.Init(&edges)
+		// adjList[s] = append(adjList[s], Edge{s, d, c})
 	}
-	heap.Init(&edges)
 
-	const k = 4
-	fmt.Println(clustering(&edges, totalNodes, k))
+	fmt.Println(clustering(&edges))
 }
