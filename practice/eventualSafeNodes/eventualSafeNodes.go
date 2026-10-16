@@ -2,60 +2,119 @@ package main
 
 import (
 	"fmt"
+	"sort"
 )
 
+func buildLL(graph [][]int) AdjList {
+	adjList := make(AdjList)
 
-// eventualSafeNodes returns, in ascending order, every node from which
-// all paths lead to a terminal node (i.e. no cycle is reachable).
-//
-// It uses Kahn's algorithm on the reversed graph: a node is safe iff all
-// of its outgoing neighbours are safe. Terminal nodes (out-degree 0) are
-// safe by definition, and we peel safe nodes off layer by layer.
+	for n, v := range graph {
+		adjList.Add(n, v)
+	}
+
+	return adjList
+}
+
 func eventualSafeNodes(graph [][]int) []int {
-	n := len(graph)
+	g := buildLL(graph)
+	l := g.Len()
 
-	// Reverse adjacency list and out-degree count.
-	rev := make([][]int, n)
-	outDeg := make([]int, n)
-	for u, neighbours := range graph {
-		outDeg[u] = len(neighbours)
-		for _, v := range neighbours {
-			rev[v] = append(rev[v], u)
+	ignoreNodes := map[int]bool{}
+	for i := range l {
+		dfs(g, i, ignoreNodes)
+	}
+	output := []int{}
+	for i := range l {
+		if ignoreNodes[i] {
+			continue
+		}
+		output = append(output, i)
+	}
+	sort.Ints(output)
+	return output
+}
+
+func contains(slice []int, val int) bool {
+	for _, item := range slice {
+		if item == val {
+			return true
 		}
 	}
+	return false
+}
 
-	// Seed the queue with all terminal nodes.
-	queue := make([]int, 0, n)
-	for u := 0; u < n; u++ {
-		if outDeg[u] == 0 {
-			queue = append(queue, u)
+func dfs(g AdjList, n int, ignoreNodes map[int]bool) []int {
+	s := Stack{}
+	s.Push(PNode{val: n})
+
+	for {
+		n := s.Pop()
+		if n.isEmpty {
+			break
 		}
-	}
-
-	safe := make([]bool, n)
-	for len(queue) > 0 {
-		u := queue[0]
-		queue = queue[1:]
-		safe[u] = true
-
-		for _, p := range rev[u] {
-			outDeg[p]--
-			if outDeg[p] == 0 {
-				queue = append(queue, p)
+		if ignoreNodes[n.val] {
+			// already cycle detected earlier. No need to consider
+			for _, nval := range n.backtrace {
+				ignoreNodes[nval] = true
 			}
+			continue
+		}
+
+		if contains(n.backtrace, n.val) {
+			// cycle detected
+			for _, ii := range n.backtrace {
+				ignoreNodes[ii] = true
+			}
+			continue
+		}
+
+		l := g[n.val]
+		for _, aa := range l {
+			bt := append(n.backtrace, n.val)
+			pn := PNode{val: aa, backtrace: bt}
+			s.Push(pn)
 		}
 	}
 
-	result := make([]int, 0, n)
-	for u := 0; u < n; u++ {
-		if safe[u] {
-			result = append(result, u)
-		}
+	return []int{}
+}
+
+type PNode struct {
+	val       int
+	backtrace []int
+	isEmpty   bool
+}
+
+type Stack []PNode
+
+func (s *Stack) Push(n PNode) {
+	*s = append(*s, n)
+}
+
+func (s *Stack) Pop() PNode {
+	lenS := len(*s)
+	if lenS == 0 {
+		return PNode{isEmpty: true}
 	}
-	return result
+	node := (*s)[lenS-1]
+	*s = (*s)[0:(lenS - 1)]
+	return node
+}
+
+type AdjList map[int][]int
+
+func (a *AdjList) Add(node int, val []int) {
+	(*a)[node] = val
+}
+
+func (a AdjList) Len() int {
+	return len(a)
 }
 
 func main() {
 	input := [][]int{{1, 2}, {2, 3}, {5}, {0}, {5}, {}, {}}
+	fmt.Println("eventual safe nodes", eventualSafeNodes(input))
+
+	input = [][]int{{0}, {2, 3, 4}, {3, 4}, {0, 4}, {}}
 	fmt.Println("eventual safe nodes", eventualSafeNodes(input))
 }
