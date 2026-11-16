@@ -34,37 +34,25 @@ func max(nums []int) int {
 }
 
 func numOfMinutes(n int, headID int, manager []int, informTime []int) int {
-	subordinates := make([][]int, n)
+	nm := make([]int, n)
+
 	for emp, mgr := range manager {
-		if mgr != -1 {
-			subordinates[mgr] = append(subordinates[mgr], emp)
+		targetEmp := emp
+		for mgr != -1 {
+			nm[targetEmp] = nm[targetEmp] + informTime[mgr]
+
+			emp = mgr
+			mgr = manager[mgr]
 		}
 	}
 
-	type item struct {
-		emp  int
-		time int
-	}
-
-	best := 0
-	stack := []item{{headID, 0}}
-	for len(stack) > 0 {
-		cur := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-
-		if cur.time > best {
-			best = cur.time
-		}
-
-		for _, sub := range subordinates[cur.emp] {
-			stack = append(stack, item{sub, cur.time + informTime[cur.emp]})
-		}
-	}
-
-	return best
+	return max(nm)
 }
 
 func main() {
 	output := numOfMinutes(6, 2, []int{2, 2, -1, 2, 2, 2}, []int{0, 0, 1, 0, 0, 0})
+	fmt.Println(output)
+
+	output = numOfMinutes(7, 6, []int{1, 2, 3, 4, 5, 6, -1}, []int{0, 6, 5, 4, 3, 2, 1})
 	fmt.Println(output)
 }
