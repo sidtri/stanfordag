@@ -3,34 +3,24 @@ package main
 import "fmt"
 
 func allPathsSourceTarget(graph [][]int) [][]int {
-	nodes := len(graph)
+	target := len(graph) - 1
 	var paths [][]int
-	type stackEntry struct {
-		val  int
-		path []int
-	}
-	stack := []stackEntry{{val: 0, path: []int{0}}}
+	path := []int{0}
 
-	for len(stack) > 0 {
-		entry := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-
-		if entry.val == (nodes - 1) {
-			paths = append(paths, entry.path)
-			continue
+	var dfs func(node int)
+	dfs = func(node int) {
+		if node == target {
+			paths = append(paths, append([]int{}, path...))
+			return
 		}
-
-		neighbors := graph[entry.val]
-		if len(neighbors) == 0 {
-			continue
-		}
-
-		for _, neighbor := range neighbors {
-			newPath := append([]int{}, entry.path...)
-			newPath = append(newPath, neighbor)
-			stack = append(stack, stackEntry{val: neighbor, path: newPath})
+		for _, neighbor := range graph[node] {
+			path = append(path, neighbor)
+			dfs(neighbor)
+			path = path[:len(path)-1]
 		}
 	}
+
+	dfs(0)
 	return paths
 }
 
